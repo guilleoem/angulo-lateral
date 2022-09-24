@@ -17,6 +17,12 @@ class Vertex2D {
 var originVertices = [];
 var vertices = [];
 var projectedVertices = [];
+var lastrcx=0, lastrcy=0,lastrcz=0;
+var camMatrix = [[1,0,0,0],
+                 [0,1,0,0],
+                 [0,0,1,0],
+                 [0,0,0,1]
+        ];
 //-----------------------------------------------------------------------------
 //-------------------------------Matrix---------------------------------
 //-----------------------------------------------------------------------------
@@ -72,9 +78,7 @@ var transformation=[];
 function transformPoint(P,M){
     var pvector =[[]];
     pvector[0]=[P.x,P.y,P.z,P.w];
-    //console.log("vector punto: ");console.log(pvector);
     pvector = matMul(pvector,M);
-    //console.log("vector punto multiplicado: ");console.log(pvector);
     return new Vertex3D(pvector[0][0],pvector[0][1],pvector[0][2],pvector[0][3]);
 }   
 
@@ -94,32 +98,33 @@ function project(M) {
     return new Vertex2D(px * M.x, px * M.y);
 }
 
+function rotate_camX(){
 
-function rotate_camX(rcx){
-    rcx = -rcx * Math.PI/180;
+    rcx = -parseFloat(sldrcx.value)+lastrcx;
     transformation = [[1,0,0,0],
                         [0,Math.cos(rcx),-Math.sin(rcx),0],
                         [0,Math.sin(rcx),Math.cos(rcx),0],
                         [0,0,0,1]];
-    objects[0].composTMatrix=matMul(objects[0].composTMatrix,transformation);
+
+    camMatrix=matMul(camMatrix,transformation);
+    lastrcx=parseFloat(sldrcx.value);
 }
-function rotate_camY(rcy){
-    rcy = rcy * Math.PI/180;
+function rotate_camY(){
+    rcy = -parseFloat(sldrcy.value)+lastrcy;
     transformation = [[Math.cos(rcy),0,Math.sin(rcy),0],
                         [0,1,0,0],
                         [-Math.sin(rcy),0,Math.cos(rcy),0],
                         [0,0,0,1]];
-    objects[0].composTMatrix=matMul(objects[0].composTMatrix,transformation);
+    camMatrix=matMul(camMatrix,transformation);
+    lastrcy = parseFloat(sldrcy.value);
 }
-function rotate_camZ(rcz){
-    rcz = rcz * Math.PI/180;
-    transformation = [[Math.cos(rcz),-Math.sin(rcz),0,0],
-                        [Math.sin(rcz),Math.cos(rcz),0,0],
+function rotate_camZ(z){
+    transformation = [[Math.cos(z),-Math.sin(z),0,0],
+                        [Math.sin(z),Math.cos(z),0,0],
                         [0,0,1,0],
                         [0,0,0,1]];
-    objects[0].composTMatrix=matMul(objects[0].composTMatrix,transformation);
+    camMatrix=matMul(camMatrix,transformation);
 }
-
 
 
 //-----------------------------------------------------------------------------
@@ -151,10 +156,11 @@ function render() {
             // Current face
             var face = faces[j];
             // Draw the first Vertex3D
-            P = face[0];//console.log("Punto asignado:");console.log(P);
-            P = transformPoint(P, objects[i].composTMatrix);//console.log("Punto transformado:");console.log(P);
+            P = face[0];
+ 
+            P = transformPoint(P, camMatrix);
             vertices[j] = new Vertex3D(P.x,P.y,P.z);
-            P = project(P); //console.log("Punto proyectado:");console.log(P);
+            P = project(P); 
             projectedVertices[j] = new Vertex2D(P.x,P.y);  
             ctx.beginPath();
             ctx.moveTo(P.x + dx, -P.y + dy);
@@ -164,9 +170,7 @@ function render() {
 
                 P = face[k];
 
-                
-                //P = transform(P, objects[i].center);
-                P = transformPoint(P, objects[i].composTMatrix);
+                P = transformPoint(P, camMatrix);
                 vertices[j+k] = new Vertex3D(P.x,P.y,P.z);
                 P = project(P);
                 projectedVertices[j+k] = new Vertex2D(P.x,P.y);
@@ -190,9 +194,7 @@ function render() {
     ctx.fillStyle="black";
     ctx.fillText("vértices transformados",900,10);
 
-    difx = projectedVertices[3].x -  projectedVertices[0].x;
-    dify = projectedVertices[3].y -  projectedVertices[0].y;
-    angW = Math.atan(difx/dify);
+    
     
     var line = 0;
     var tf = 2;
@@ -208,6 +210,9 @@ function render() {
         ctx.fillText("x: " + P.x + "    y: " + P.y,900,(i+line+5)*10+10);
     }
 
+    difx = projectedVertices[3].x -  projectedVertices[0].x;
+    dify = projectedVertices[3].y -  projectedVertices[0].y;
+    angW = Math.atan(difx/dify);
     ctx.fillText("ángulo lateral: " + angW*180/Math.PI,900,150);
     ctx.fillText("ángulo lateral (GMS): " + formatGMS(angW*180/Math.PI),900,160);
 }
@@ -220,14 +225,14 @@ function render() {
  var dx = (canvas.width) / 2;
  var dy = canvas.height / 2;
  var constObjects=[];
- // Objects style
+
  var ctx = canvas.getContext('2d');
  
  
- // Create the objetcs
 
+//first render
  calc();
- // First render
+ 
  render();
  
  
